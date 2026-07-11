@@ -241,4 +241,13 @@ async def health():
     }
 
 
+@app.websocket_route("/{path:path}")
+async def reject_websocket(websocket):
+    # StaticFiles (mounted below) only handles HTTP scope and throws an
+    # unhandled AssertionError on anything else. Maritime's tunnel/proxy
+    # infra appears to probe with a WebSocket upgrade occasionally — close
+    # it cleanly instead of letting that exception surface in the logs.
+    await websocket.close(code=1008)
+
+
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
