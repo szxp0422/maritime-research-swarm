@@ -287,6 +287,14 @@ const answerEl = document.getElementById('answer');
 const answerText = document.getElementById('answerText');
 const answerSources = document.getElementById('answerSources');
 
+// Base path for API calls. The app may be served under a path prefix
+// (e.g. https://api.maritime.sh/a/<agent-id>/), so we can't use absolute
+// paths like "/run" — those resolve to the domain root and miss the
+// prefix entirely. Instead we derive the base from the current URL.
+const basePath = window.location.pathname.endsWith('/')
+  ? window.location.pathname
+  : window.location.pathname.replace(/[^/]*$/, '');
+
 let pollTimer = null;
 
 function svgNS(tag){ return document.createElementNS('http://www.w3.org/2000/svg', tag); }
@@ -451,7 +459,7 @@ function applyState(job){
 
 async function poll(jobId){
   try{
-    const res = await fetch(`/jobs/${jobId}`);
+    const res = await fetch(`${basePath}jobs/${jobId}`);
     if(!res.ok) throw new Error('job lookup failed');
     const job = await res.json();
 
@@ -486,7 +494,7 @@ form.addEventListener('submit', async (e) => {
   buildMap(3);
 
   try{
-    const res = await fetch('/run', {
+    const res = await fetch(`${basePath}run`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({question: q})
