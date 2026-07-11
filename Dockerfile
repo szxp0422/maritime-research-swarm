@@ -6,11 +6,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+RUN chmod +x start.sh
 
 EXPOSE 8080
 
-# Shell form (not exec/JSON form) so ${PORT} gets substituted at runtime.
-# Maritime injects its own PORT env var and forwards its public port to it;
-# hardcoding 8080 here collides with Maritime's own forwarder on that port.
-# Falls back to 8080 for local `docker run` / plain `uvicorn` use.
-CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8080}
+# Single-element exec-form CMD on purpose: Maritime's launcher was observed
+# mis-splitting a multi-word shell-form CMD (each word became a separate
+# argv item to `sh -c`, so only the first word ran and the rest were
+# dropped as unused positional params). A single script path has nothing
+# to mis-split. start.sh resolves Maritime's injected PORT internally.
+CMD ["./start.sh"]
