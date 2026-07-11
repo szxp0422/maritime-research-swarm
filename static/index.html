@@ -293,7 +293,7 @@ const answerSources = document.getElementById('answerSources');
 // prefix entirely. Instead we derive the base from the current URL.
 const basePath = window.location.pathname.endsWith('/')
   ? window.location.pathname
-  : window.location.pathname.replace(/[^/]*$/, '');
+  : `${window.location.pathname}/`;
 
 let pollTimer = null;
 
