@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Research Swarm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0B1220;
+    --panel: #101B2D;
+    --panel-2: #16233A;
+    --line: #24344E;
+    --teal: #3FE0C0;
+    --amber: #FFB84D;
+    --text: #E8EEF5;
+    --muted: #7C8CA6;
+    --danger: #FF6B6B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, #142238 0%, var(--ink) 55%);
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+
+  header{margin-bottom:28px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.18em;
+    color:var(--teal);
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:clamp(28px, 5vw, 40px);
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  p.sub{
+    color:var(--muted);
+    font-size:15px;
+    max-width:56ch;
+    margin:0;
+    line-height:1.5;
+  }
+
+  form{
+    display:flex;
+    gap:10px;
+    margin-top:24px;
+  }
+  input[type=text]{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    padding:14px 16px;
+    border-radius:8px;
+    outline:none;
+  }
+  input[type=text]:focus{border-color:var(--teal);}
+  input[type=text]::placeholder{color:var(--muted);}
+  button{
+    background:var(--teal);
+    color:#06231d;
+    border:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    padding:0 22px;
+    border-radius:8px;
+    cursor:pointer;
+    letter-spacing:.02em;
+  }
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  button:not(:disabled):hover{filter:brightness(1.08);}
+
+  .status-line{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:12px;
+    min-height:16px;
+    letter-spacing:.04em;
+  }
+  .status-line.error{color:var(--danger);}
+
+  /* --- swarm map --- */
+  .map{
+    margin-top:36px;
+    display:none;
+  }
+  .map.show{display:block;}
+  svg{width:100%;height:auto;display:block;overflow:visible;}
+
+  .node-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    fill:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+  .node circle{
+    fill:var(--panel);
+    stroke:var(--line);
+    stroke-width:1.5;
+    transition:stroke .3s ease, fill .3s ease;
+  }
+  .node.active circle{stroke:var(--amber);}
+  .node.done circle{stroke:var(--teal); fill:#122a26;}
+  .node.error circle{stroke:var(--danger);}
+  .node text.icon{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:11px;
+    fill:var(--muted);
+    text-anchor:middle;
+  }
+  .node.active text.icon{fill:var(--amber);}
+  .node.done text.icon{fill:var(--teal);}
+
+  .edge{
+    stroke:var(--line);
+    stroke-width:1.5;
+    fill:none;
+    transition:stroke .3s ease;
+  }
+  .edge.active{stroke:var(--amber);}
+  .edge.done{stroke:var(--teal);}
+
+  .ping{
+    r:3;
+    fill:var(--amber);
+    opacity:0;
+  }
+  .ping.fire{
+    animation:pingmove 1.1s ease-in-out infinite;
+  }
+  @keyframes pingmove{
+    0%{opacity:0;}
+    10%{opacity:1;}
+    90%{opacity:1;}
+    100%{opacity:0;}
+  }
+
+  .ring{
+    fill:none;
+    stroke:var(--amber);
+    stroke-width:1;
+    opacity:0;
+  }
+  .ring.pulse{animation:pulse 1.6s ease-out infinite;}
+  @keyframes pulse{
+    0%{r:14; opacity:.6; stroke-width:1.5;}
+    100%{r:34; opacity:0; stroke-width:0.5;}
+  }
+
+  /* --- findings cards --- */
+  .findings{
+    margin-top:28px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:12px;
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+  }
+  .card .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .card.done .tag{color:var(--teal);}
+  .card.active .tag{color:var(--amber);}
+  .card h3{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:14.5px;
+    margin:0 0 8px;
+    font-weight:500;
+    line-height:1.35;
+  }
+  .card p{
+    font-size:13px;
+    line-height:1.55;
+    color:var(--text);
+    margin:0;
+    opacity:.9;
+  }
+  .card .src{
+    margin-top:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+  }
+  .card .src a{color:var(--muted);}
+
+  /* --- answer --- */
+  .answer{
+    display:none;
+    margin-top:28px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-left:3px solid var(--teal);
+    border-radius:10px;
+    padding:22px 24px;
+  }
+  .answer.show{display:block;}
+  .answer .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--teal);
+    margin-bottom:10px;
+  }
+  .answer p{
+    font-size:15.5px;
+    line-height:1.65;
+    margin:0 0 14px;
+    white-space:pre-wrap;
+  }
+  .answer ol{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    padding-left:18px;
+    margin:0;
+  }
+  .answer ol li{margin-bottom:5px;}
+  .answer ol a{color:var(--muted);}
+  .answer ol a:hover{color:var(--teal);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Research Swarm · running on Maritime</div>
+    <h1>One question, three signals out.</h1>
+    <p class="sub">A dispatcher splits your question into angles, researchers ping the web in parallel, a synthesizer brings it back as one answer.</p>
+  </header>
+
+  <form id="form">
+    <input id="question" type="text" placeholder="Ask something worth researching…" autocomplete="off" />
+    <button id="submit" type="submit">Dispatch →</button>
+  </form>
+  <div class="status-line" id="statusLine">&nbsp;</div>
+
+  <div class="map" id="map">
+    <svg id="svg" viewBox="0 0 760 300"></svg>
+  </div>
+
+  <div class="findings" id="findings"></div>
+
+  <div class="answer" id="answer">
+    <div class="tag">Synthesized answer</div>
+    <p id="answerText"></p>
+    <ol id="answerSources"></ol>
+  </div>
+</div>
+
+<script>
+const form = document.getElementById('form');
+const input = document.getElementById('question');
+const submitBtn = document.getElementById('submit');
+const statusLine = document.getElementById('statusLine');
+const mapEl = document.getElementById('map');
+const svg = document.getElementById('svg');
+const findingsEl = document.getElementById('findings');
+const answerEl = document.getElementById('answer');
+const answerText = document.getElementById('answerText');
+const answerSources = document.getElementById('answerSources');
+
+let pollTimer = null;
+
+function svgNS(tag){ return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+function layout(n){
+  const W = 760, H = 300;
+  const dispatcher = {x: W/2, y: 40};
+  const synth = {x: W/2, y: H-30};
+  const researchers = [];
+  const gap = W / (n+1);
+  for(let i=0;i<n;i++){
+    researchers.push({x: gap*(i+1), y: H/2});
+  }
+  return {dispatcher, synth, researchers, W, H};
+}
+
+function buildMap(n){
+  svg.innerHTML = '';
+  const {dispatcher, synth, researchers, W, H} = layout(n);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const edgesTop = [];
+  const edgesBottom = [];
+
+  researchers.forEach((r, i) => {
+    const e1 = svgNS('path');
+    e1.setAttribute('class', 'edge');
+    e1.setAttribute('id', `edge-top-${i}`);
+    e1.setAttribute('d', `M ${dispatcher.x} ${dispatcher.y} L ${r.x} ${r.y}`);
+    svg.appendChild(e1);
+    edgesTop.push(e1);
+
+    const e2 = svgNS('path');
+    e2.setAttribute('class', 'edge');
+    e2.setAttribute('id', `edge-bottom-${i}`);
+    e2.setAttribute('d', `M ${r.x} ${r.y} L ${synth.x} ${synth.y}`);
+    svg.appendChild(e2);
+    edgesBottom.push(e2);
+  });
+
+  function makeNode(id, pos, label, icon){
+    const g = svgNS('g');
+    g.setAttribute('class', 'node');
+    g.setAttribute('id', id);
+    const ring = svgNS('circle');
+    ring.setAttribute('class', 'ring');
+    ring.setAttribute('cx', pos.x); ring.setAttribute('cy', pos.y);
+    ring.setAttribute('r', 14);
+    g.appendChild(ring);
+    const c = svgNS('circle');
+    c.setAttribute('cx', pos.x); c.setAttribute('cy', pos.y); c.setAttribute('r', 16);
+    g.appendChild(c);
+    const t = svgNS('text');
+    t.setAttribute('class','icon');
+    t.setAttribute('x', pos.x); t.setAttribute('y', pos.y+4);
+    t.textContent = icon;
+    g.appendChild(t);
+    const lbl = svgNS('text');
+    lbl.setAttribute('class','node-label');
+    lbl.setAttribute('x', pos.x); lbl.setAttribute('y', pos.y + (pos.y < H/2 ? -24 : 30));
+    lbl.setAttribute('text-anchor','middle');
+    lbl.textContent = label;
+    g.appendChild(lbl);
+    svg.appendChild(g);
+    return g;
+  }
+
+  makeNode('node-dispatcher', dispatcher, 'dispatcher', '◆');
+  researchers.forEach((r,i) => makeNode(`node-r${i}`, r, `researcher ${i+1}`, '◎'));
+  makeNode('node-synth', synth, 'synthesizer', '◆');
+}
+
+function setNodeState(id, state){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove('active','done','error');
+  if(state) el.classList.add(state);
+  const ring = el.querySelector('.ring');
+  if(ring){
+    ring.classList.toggle('pulse', state === 'active');
+  }
+}
+
+function setEdgeState(id, state){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove('active','done');
+  if(state) el.classList.add(state);
+}
+
+function renderFindings(subQuestions){
+  findingsEl.innerHTML = '';
+  subQuestions.forEach((sq, i) => {
+    const card = document.createElement('div');
+    card.className = 'card' + (sq.status === 'done' ? ' done' : sq.status === 'active' ? ' active' : '');
+    const tagText = sq.status === 'done' ? 'signal received' : sq.status === 'active' ? 'listening…' : 'queued';
+    let srcHtml = '';
+    if(sq.sources && sq.sources.length){
+      srcHtml = '<div class="src">' + sq.sources.slice(0,3).map(s => `<a href="${s.url}" target="_blank" rel="noopener">${(s.title||s.url).slice(0,40)}</a>`).join(' · ') + '</div>';
+    }
+    card.innerHTML = `
+      <div class="tag">researcher ${i+1} · ${tagText}</div>
+      <h3>${sq.text}</h3>
+      <p>${sq.finding ? sq.finding : '<span style="color:var(--muted)">awaiting response…</span>'}</p>
+      ${srcHtml}
+    `;
+    findingsEl.appendChild(card);
+  });
+}
+
+function renderAnswer(job){
+  if(job.status !== 'done'){ answerEl.classList.remove('show'); return; }
+  answerText.textContent = job.answer || '';
+  answerSources.innerHTML = '';
+  (job.sources||[]).forEach(s => {
+    const li = document.createElement('li');
+    li.innerHTML = `<a href="${s.url}" target="_blank" rel="noopener">${s.title||s.url}</a>`;
+    answerSources.appendChild(li);
+  });
+  answerEl.classList.add('show');
+}
+
+function applyState(job){
+  const n = job.sub_questions.length || 3;
+
+  if(job.status === 'dispatching'){
+    setNodeState('node-dispatcher','active');
+    statusLine.textContent = '> dispatcher decomposing question into research angles…';
+  } else if(job.status === 'researching'){
+    setNodeState('node-dispatcher','done');
+    for(let i=0;i<n;i++) setEdgeState(`edge-top-${i}`,'done');
+    job.sub_questions.forEach((sq,i) => {
+      setNodeState(`node-r${i}`, sq.status === 'done' ? 'done' : sq.status === 'active' ? 'active' : null);
+    });
+    statusLine.textContent = '> researchers scanning the web in parallel…';
+  } else if(job.status === 'synthesizing'){
+    setNodeState('node-dispatcher','done');
+    for(let i=0;i<n;i++){
+      setEdgeState(`edge-top-${i}`,'done');
+      setNodeState(`node-r${i}`,'done');
+      setEdgeState(`edge-bottom-${i}`,'done');
+    }
+    setNodeState('node-synth','active');
+    statusLine.textContent = '> synthesizer merging findings into one answer…';
+  } else if(job.status === 'done'){
+    setNodeState('node-dispatcher','done');
+    for(let i=0;i<n;i++){
+      setEdgeState(`edge-top-${i}`,'done');
+      setNodeState(`node-r${i}`,'done');
+      setEdgeState(`edge-bottom-${i}`,'done');
+    }
+    setNodeState('node-synth','done');
+    statusLine.textContent = '> done.';
+  } else if(job.status === 'error'){
+    statusLine.textContent = '> error: ' + (job.error || 'unknown failure');
+    statusLine.classList.add('error');
+  }
+
+  renderFindings(job.sub_questions);
+  renderAnswer(job);
+}
+
+async function poll(jobId){
+  try{
+    const res = await fetch(`/jobs/${jobId}`);
+    if(!res.ok) throw new Error('job lookup failed');
+    const job = await res.json();
+
+    if(job.sub_questions.length && !document.getElementById('node-r0')){
+      buildMap(job.sub_questions.length);
+    }
+    applyState(job);
+
+    if(job.status === 'done' || job.status === 'error'){
+      clearInterval(pollTimer);
+      submitBtn.disabled = false;
+    }
+  }catch(e){
+    statusLine.textContent = '> ' + e.message;
+    statusLine.classList.add('error');
+    clearInterval(pollTimer);
+    submitBtn.disabled = false;
+  }
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const q = input.value.trim();
+  if(!q) return;
+
+  submitBtn.disabled = true;
+  statusLine.classList.remove('error');
+  statusLine.textContent = '> dispatching…';
+  findingsEl.innerHTML = '';
+  answerEl.classList.remove('show');
+  mapEl.classList.add('show');
+  buildMap(3);
+
+  try{
+    const res = await fetch('/run', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({question: q})
+    });
+    if(!res.ok) throw new Error('failed to start run');
+    const {job_id} = await res.json();
+    clearInterval(pollTimer);
+    pollTimer = setInterval(() => poll(job_id), 900);
+    poll(job_id);
+  }catch(err){
+    statusLine.textContent = '> ' + err.message;
+    statusLine.classList.add('error');
+    submitBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
